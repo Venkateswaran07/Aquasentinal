@@ -211,8 +211,7 @@
 
     <script>
         // --- Gemini Configuration ---
-        const apiKey = ""; // API Key injected by environment
-        const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const apiURL = "/api/gemini"; // Use backend proxy for Gemini API
 
         // --- State ---
         const state = {
@@ -432,12 +431,20 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
                 const data = await response.json();
-                const aiContent = data.candidates[0].content.parts[0].text;
-                
-                outputText.innerHTML = marked.parse(aiContent);
+                if (data.error) {
+                    outputText.innerHTML = "AI Service Error: " + data.error;
+                    outputBox.classList.remove('hidden');
+                    return;
+                }
+                const aiContent = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+                if (aiContent) {
+                    outputText.innerHTML = marked.parse(aiContent);
+                } else {
+                    outputText.innerHTML = "AI Service Error: Unexpected response format.";
+                }
                 outputBox.classList.remove('hidden');
             } catch (e) {
-                outputText.innerHTML = "Error connecting to AI service.";
+                outputText.innerHTML = "Error connecting to AI service: " + e;
                 outputBox.classList.remove('hidden');
             } finally {
                 btn.innerHTML = "✨ Analyze Location with AI";
