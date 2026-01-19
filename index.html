@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,29 +11,78 @@
     <!-- Leaflet for Map Visualization -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
     <style>
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .chart-container { position: relative; width: 100%; height: 250px; }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+        }
+
         /* Map is now taller and central */
-        .map-container { position: relative; width: 100%; height: 500px; z-index: 10; border-radius: 0.75rem; overflow: hidden; cursor: crosshair; }
-        .nav-active { border-bottom: 2px solid #06b6d4; color: #0891b2; font-weight: 600; }
-        .step-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms; }
-        
-        .prose h3 { font-size: 1.1em; font-weight: bold; margin-top: 1em; color: #0f172a; }
-        .prose ul { list-style-type: disc; padding-left: 1.5em; margin-top: 0.5em; }
-        .prose strong { color: #0891b2; }
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            z-index: 10;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        .nav-active {
+            border-bottom: 2px solid #06b6d4;
+            color: #0891b2;
+            font-weight: 600;
+        }
+
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+        }
+
+        .prose h3 {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 1em;
+            color: #0f172a;
+        }
+
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5em;
+            margin-top: 0.5em;
+        }
+
+        .prose strong {
+            color: #0891b2;
+        }
 
         /* Scanning Animation Overlay */
         .scanner-overlay {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(6, 182, 212, 0.1);
             pointer-events: none;
             display: none;
             z-index: 1000;
         }
+
         .scan-line {
             width: 100%;
             height: 2px;
@@ -40,12 +90,92 @@
             box-shadow: 0 0 10px #06b6d4;
             animation: scan 2s linear infinite;
         }
+
         @keyframes scan {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(500px); }
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(500px);
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            @page {
+                size: landscape;
+                margin: 1cm;
+            }
+
+            body {
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            nav,
+            .nav-btn,
+            .hidden-print,
+            button,
+            #statusIndicator,
+            .scanner-overlay {
+                display: none !important;
+            }
+
+            #dashboard,
+            #analysis {
+                display: block !important;
+                page-break-inside: avoid;
+            }
+
+            #methodology {
+                display: none !important;
+            }
+
+            .map-container {
+                height: 400px;
+                border: 1px solid #ccc;
+            }
+
+            .shadow-md,
+            .shadow-sm {
+                box-shadow: none !important;
+                border: 1px solid #ddd;
+            }
+
+            main {
+                padding: 0;
+                margin: 0;
+                max-width: 100%;
+            }
+
+            /* Ensure charts and maps are visible */
+            canvas,
+            .leaflet-container {
+                max-width: 100% !important;
+            }
+
+            /* Layout adjustments for print */
+            .grid-cols-1 {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .print-break-inside {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            #aiOutput {
+                display: block !important;
+                border: 1px solid #ddd;
+            }
         }
     </style>
 </head>
+
 <body class="bg-slate-50 flex flex-col h-screen">
 
     <!-- Navigation -->
@@ -54,12 +184,21 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <span class="text-2xl mr-2">💧</span>
-                    <h1 class="text-xl font-bold text-slate-800 tracking-tight">AquaSense <span class="text-cyan-600 font-light">| Live Monitor</span></h1>
+                    <h1 class="text-xl font-bold text-slate-800 tracking-tight">AquaSense <span
+                            class="text-cyan-600 font-light">| Live Monitor</span></h1>
                 </div>
                 <div class="hidden sm:flex space-x-8 items-center">
-                    <button onclick="navTo('dashboard')" id="nav-dashboard" class="nav-btn nav-active px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Map Interface</button>
-                    <button onclick="navTo('analysis')" id="nav-analysis" class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Detailed Analytics</button>
-                    <button onclick="navTo('methodology')" id="nav-methodology" class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Methodology</button>
+                    <button onclick="navTo('dashboard')" id="nav-dashboard"
+                        class="nav-btn nav-active px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Map
+                        Interface</button>
+                    <button onclick="navTo('analysis')" id="nav-analysis"
+                        class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Detailed
+                        Analytics</button>
+                    <button onclick="navTo('data-mgmt')" id="nav-data-mgmt"
+                        class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Data
+                        Management</button>
+                    <button onclick="navTo('methodology')" id="nav-methodology"
+                        class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Methodology</button>
                 </div>
             </div>
         </div>
@@ -70,21 +209,22 @@
 
         <!-- DASHBOARD VIEW -->
         <section id="dashboard" class="space-y-6 animate-fade-in h-full">
-            
+
             <!-- Map Container -->
             <div class="bg-white p-1 rounded-xl shadow-md border border-slate-200 relative">
                 <div id="map" class="map-container"></div>
-                
+
                 <!-- Scanner Animation (Hidden by default) -->
                 <div id="scanner" class="scanner-overlay flex flex-col justify-center">
                     <div class="scan-line"></div>
                 </div>
 
                 <!-- Floating Controls -->
-                <div class="absolute top-4 right-4 z-[500] bg-white/90 backdrop-blur p-4 rounded-lg shadow-lg border border-slate-200 w-72">
+                <div
+                    class="absolute top-4 right-4 z-[500] bg-white/90 backdrop-blur p-4 rounded-lg shadow-lg border border-slate-200 w-72">
                     <h4 class="font-bold text-slate-700 text-sm mb-2">Live Analysis Control</h4>
                     <p class="text-xs text-slate-500 mb-3">Click any water body to calculate volume.</p>
-                    
+
                     <div class="flex items-center justify-between text-xs mb-2">
                         <span class="font-semibold text-slate-600">Lat:</span>
                         <span id="dispLat" class="font-mono text-slate-500">--</span>
@@ -94,9 +234,14 @@
                         <span id="dispLon" class="font-mono text-slate-500">--</span>
                     </div>
 
-                    <div id="statusIndicator" class="flex items-center p-2 bg-slate-100 rounded text-xs">
+                    <div id="statusIndicator" class="flex items-center p-2 bg-slate-100 rounded text-xs mb-3">
                         <div id="statusDot" class="w-2 h-2 rounded-full bg-slate-400 mr-2"></div>
                         <span id="statusText">Ready to Scan</span>
+                    </div>
+
+                    <!-- Layer Control Panel (Dynamic) -->
+                    <div id="layerControl" class="hidden border-t border-slate-200 pt-3">
+                        <!-- Filled by JS -->
                     </div>
                 </div>
             </div>
@@ -134,24 +279,40 @@
                 </div>
                 <!-- AI Action -->
                 <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-center">
-                    <button onclick="generateAIReport()" id="aiBtn" class="text-xs font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-600 hover:text-white py-2 px-4 rounded shadow-sm transition-colors flex items-center justify-center gap-2">
+                    <button onclick="generateAIReport()" id="aiBtn"
+                        class="text-xs font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-600 hover:text-white py-2 px-4 rounded shadow-sm transition-colors flex items-center justify-center gap-2">
                         <span>✨ Analyze Location with AI</span>
                     </button>
                 </div>
             </div>
-            
+
             <!-- AI Output Area -->
             <div id="aiOutput" class="hidden bg-white p-6 rounded-xl border-l-4 border-indigo-500 shadow-sm relative">
-                 <button onclick="document.getElementById('aiOutput').classList.add('hidden')" class="absolute top-2 right-2 text-slate-300 hover:text-slate-500">✕</button>
-                 <h4 class="font-bold text-indigo-800 mb-2 flex items-center"><span class="mr-2">✨</span> Hydrological Report</h4>
-                 <div id="aiText" class="prose prose-sm max-w-none text-slate-600"></div>
+                <button onclick="document.getElementById('aiOutput').classList.add('hidden')"
+                    class="absolute top-2 right-2 text-slate-300 hover:text-slate-500">✕</button>
+                <h4 class="font-bold text-indigo-800 mb-2 flex items-center"><span class="mr-2">✨</span> Hydrological
+                    Report</h4>
+                <div id="aiText" class="prose prose-sm max-w-none text-slate-600"></div>
             </div>
-
         </section>
 
         <!-- ANALYTICS VIEW -->
         <section id="analysis" class="hidden space-y-6 animate-fade-in">
-             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <!-- Actions -->
+            <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+                <button onclick="downloadCSV()"
+                    class="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors">
+                    <span>📊</span>
+                    <span class="text-sm font-bold">Export CSV</span>
+                </button>
+                <button onclick="window.print()"
+                    class="flex items-center space-x-2 px-4 py-2 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
+                    <span>🖨️</span>
+                    <span class="text-sm font-bold">Print / Save PDF</span>
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 print-break-inside">
                 <div class="flex justify-between items-center mb-6">
                     <h4 class="font-bold text-slate-700">Historical Volume Trend (Simulated)</h4>
                 </div>
@@ -159,14 +320,14 @@
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 print-break-inside">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                     <h4 class="font-bold text-slate-700 mb-4">Seasonal Comparison</h4>
                     <div class="chart-container">
                         <canvas id="seasonalChart"></canvas>
                     </div>
                 </div>
-                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                     <h4 class="font-bold text-slate-700 mb-4">Prediction Confidence</h4>
                     <div class="flex items-center justify-center h-48">
                         <div class="text-center">
@@ -179,19 +340,21 @@
         </section>
 
         <!-- METHODOLOGY VIEW -->
-        <section id="methodology" class="hidden space-y-6 animate-fade-in">
+        <section id="methodology" class="hidden space-y-6 animate-fade-in print-hidden">
             <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100">
                 <h3 class="text-2xl font-bold text-slate-800 mb-6">How It Works</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="p-4 border border-slate-200 rounded-lg hover:border-cyan-400 transition-colors">
                         <div class="text-2xl mb-2">🛰️</div>
                         <h4 class="font-bold text-sm">1. Sentinel-2 Input</h4>
-                        <p class="text-xs text-slate-500 mt-1">System fetches multispectral tiles for clicked coordinates.</p>
+                        <p class="text-xs text-slate-500 mt-1">System fetches multispectral tiles for clicked
+                            coordinates.</p>
                     </div>
                     <div class="p-4 border border-slate-200 rounded-lg hover:border-cyan-400 transition-colors">
                         <div class="text-2xl mb-2">🌊</div>
                         <h4 class="font-bold text-sm">2. NDWI Index</h4>
-                        <p class="text-xs text-slate-500 mt-1">Calculates (Green - NIR)/(Green + NIR) to detect water.</p>
+                        <p class="text-xs text-slate-500 mt-1">Calculates (Green - NIR)/(Green + NIR) to detect water.
+                        </p>
                     </div>
                     <div class="p-4 border border-slate-200 rounded-lg hover:border-cyan-400 transition-colors">
                         <div class="text-2xl mb-2">⛰️</div>
@@ -202,6 +365,97 @@
                         <div class="text-2xl mb-2">📊</div>
                         <h4 class="font-bold text-sm">4. Calculation</h4>
                         <p class="text-xs text-slate-500 mt-1">Outputs total surface area and estimated volume.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DATA MANAGEMENT VIEW -->
+        <section id="data-mgmt" class="hidden space-y-6 animate-fade-in print-break-inside">
+            <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100">
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Upload Geospatial Data</h3>
+                <p class="text-slate-500 text-sm mb-6">Upload local datasets to calibrate volume estimation.</p>
+
+                <form id="uploadForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Boundary Input -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Reservoir Boundary
+                                (GeoJSON)</label>
+                            <div class="flex items-center justify-center w-full">
+                                <label for="boundaryFile"
+                                    class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <div class="text-3xl mb-2">📍</div>
+                                        <p class="text-sm text-slate-500"><span class="font-semibold">Click to
+                                                upload</span> GeoJSON</p>
+                                    </div>
+                                    <input id="boundaryFile" name="boundary" type="file" class="hidden"
+                                        accept=".json,.geojson" />
+                                </label>
+                            </div>
+                            <div id="boundFileName" class="text-xs text-green-600 mt-2 font-mono h-4"></div>
+                        </div>
+
+                        <!-- Bathymetry Input -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Bathymetry Points (CSV)</label>
+                            <div class="flex items-center justify-center w-full">
+                                <label for="bathyFile"
+                                    class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <div class="text-3xl mb-2">📉</div>
+                                        <p class="text-sm text-slate-500"><span class="font-semibold">Click to
+                                                upload</span> CSV (Lat, Lon, Elev)</p>
+                                    </div>
+                                    <input id="bathyFile" name="bathymetry" type="file" class="hidden" accept=".csv" />
+                                </label>
+                            </div>
+                            <div id="bathyFileName" class="text-xs text-green-600 mt-2 font-mono h-4"></div>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="processUpload()" id="processBtn"
+                        class="w-full bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 transition-colors flex items-center justify-center gap-2">
+                        <span>🚀 Process Data & Generate Report</span>
+                    </button>
+                </form>
+
+                <!-- Results Container -->
+                <div id="uploadResults" class="hidden mt-8 border-t border-slate-100 pt-6">
+                    <h4 class="font-bold text-slate-800 mb-4">Processing Results</h4>
+                    <div class="bg-green-50 text-green-800 p-4 rounded-lg mb-4 text-sm">
+                        Analyzed <span id="resPoints" class="font-bold">--</span> elevation points.
+                        Max Capacity: <span id="resVol" class="font-bold">--</span> MCM.
+                    </div>
+
+                    <div class="flex gap-4">
+                        <a href="/api/download/pdf" target="_blank"
+                            class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-50 text-center flex items-center justify-center gap-2">
+                            <span>📄 Download PDF Report</span>
+                        </a>
+                        <a href="/api/download/csv" target="_blank"
+                            class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-50 text-center flex items-center justify-center gap-2">
+                            <span>📊 Download CSV Data</span>
+                        </a>
+                    </div>
+
+                    <div class="mt-6">
+                        <h5 class="font-bold text-xs text-slate-500 uppercase mb-2">Detailed Table (Preview)</h5>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm text-left text-slate-500">
+                                <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-2">Elevation (m)</th>
+                                        <th class="px-4 py-2">Area (km²)</th>
+                                        <th class="px-4 py-2">Volume (MCM)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resTableBody">
+                                    <!-- Rows -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -222,8 +476,132 @@
             currentLng: 0,
             currentArea: 0,
             currentVol: 0,
-            isScanning: false
+            isScanning: false,
+            layers: {} // Store layers for reporting
         };
+
+        // --- File Management ---
+        function updateDropzone(input, labelId, fileNameId) {
+            const label = input.closest('label'); // Use closest to find the parent label if ID fails or logic changes
+            const nameDisplay = document.getElementById(fileNameId);
+
+            input.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+
+                if (file) {
+                    // Visual Success State
+                    label.classList.remove('border-slate-300', 'bg-slate-50', 'hover:bg-slate-100');
+                    label.classList.add('border-emerald-500', 'bg-emerald-50');
+
+                    // Update Content
+                    const container = label.firstElementChild;
+                    container.innerHTML = `
+                        <div class="text-3xl mb-2">✅</div>
+                        <p class="text-sm text-emerald-700 font-bold break-all px-2 text-center">${file.name}</p>
+                        <p class="text-xs text-emerald-600 mt-1">Ready to upload</p>
+                    `;
+                    nameDisplay.innerText = "";
+                }
+            });
+        }
+
+        // Initialize dropzones
+        const bInput = document.getElementById('boundaryFile');
+        const dInput = document.getElementById('bathyFile');
+        if (bInput && dInput) {
+            updateDropzone(bInput, 'boundaryLabel', 'boundFileName');
+            updateDropzone(dInput, 'bathyLabel', 'bathyFileName');
+        }
+
+        async function processUpload() {
+            const btn = document.getElementById('processBtn');
+            const bFile = document.getElementById('boundaryFile').files[0];
+            const dFile = document.getElementById('bathyFile').files[0];
+
+            if (!bFile || !dFile) {
+                alert("Please upload both a Boundary (GeoJSON) and Bathymetry (CSV) file.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = "⏳ Processing Geometry...";
+
+            const formData = new FormData();
+            formData.append('boundary', bFile);
+            formData.append('bathymetry', dFile);
+
+            try {
+                const response = await fetch('/api/upload_process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Success
+                    document.getElementById('uploadResults').classList.remove('hidden');
+                    const data = result.data;
+                    const last = data[data.length - 1];
+
+                    document.getElementById('resPoints').innerText = 'Checked';
+                    document.getElementById('resVol').innerText = last['Volume (MCM)'];
+
+                    const tbody = document.getElementById('resTableBody');
+                    tbody.innerHTML = '';
+                    // Show first 5 and last 5? Or just all if small.
+                    data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.className = "bg-white border-b hover:bg-slate-50";
+                        tr.innerHTML = `
+                            <td class="px-4 py-2">${row['Elevation (m)']}</td>
+                            <td class="px-4 py-2">${row['Surface Area (sq km)']}</td>
+                            <td class="px-4 py-2 font-bold text-cyan-600">${row['Volume (MCM)']}</td>
+                         `;
+                        tbody.appendChild(tr);
+                    });
+
+                    btn.innerText = "✅ Processing Complete";
+
+                } else {
+                    alert('Error: ' + result.message || result.error);
+                    btn.innerText = "❌ Processing Failed";
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Network error occurred.");
+                btn.innerText = "❌ Processing Failed";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // --- Reporting ---
+        function downloadCSV() {
+            if (state.currentArea === 0) {
+                alert("No analysis data to export. Please select a location first.");
+                return;
+            }
+
+            const now = new Date().toISOString();
+            const csvContent = "data:text/csv;charset=utf-8,"
+                + "Metric,Value,Unit\n"
+                + `Analysis Date,${now},-\n`
+                + `Latitude,${state.currentLat},deg\n`
+                + `Longitude,${state.currentLng},deg\n`
+                + `Water Surface Area,${state.currentArea},km2\n`
+                + `Estimated Volume,${state.currentVol},MCM\n`
+                + `Status,${document.getElementById('statusText').innerText},-\n`
+                + `AI Summary,"${document.getElementById('aiText').innerText.replace(/\n/g, ' ').replace(/"/g, '""')}","-"\n`; // Simple CSV escaping
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `aquasense_report_${now.slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -254,10 +632,10 @@
 
         function onMapClick(e) {
             if (state.isScanning) return;
-            
+
             state.currentLat = e.latlng.lat;
             state.currentLng = e.latlng.lng;
-            
+
             // 1. Update UI Coordinates
             document.getElementById('dispLat').innerText = state.currentLat.toFixed(5);
             document.getElementById('dispLon').innerText = state.currentLng.toFixed(5);
@@ -276,7 +654,7 @@
             const scanner = document.getElementById('scanner');
             const statusText = document.getElementById('statusText');
             const statusDot = document.getElementById('statusDot');
-            
+
             // UI State: Scanning
             scanner.style.display = 'block';
             statusText.innerText = "Processing Sentinel-2 Tiles...";
@@ -307,38 +685,100 @@
                 // Update State with Real Data
                 state.currentArea = data.area;
                 state.currentVol = data.volume;
+                state.layers = data.layers; // Save layers
 
-                const capacity = state.currentVol * 1.5; // Estimated capacity
-                const fillPct = Math.min(100, Math.round((state.currentVol / capacity) * 100));
+                // Dynamic Capacity based on Seasonal Max
+                const capacity = data.max_volume > 0 ? data.max_volume : state.currentVol * 1.5;
+                let fillPct = 0;
+                if (capacity > 0) {
+                    fillPct = Math.min(100, Math.round((state.currentVol / capacity) * 100));
+                }
 
-                updateMetrics(state.currentArea, state.currentVol, fillPct);
-                statusText.innerText = "Analysis Complete";
+                updateMetrics(state.currentArea, state.currentVol, fillPct, data.avg_elevation);
+                statusText.innerText = `Analysis Complete (${data.date})`;
                 statusText.className = "text-green-600 font-bold";
                 statusDot.className = "w-2 h-2 rounded-full bg-green-500 mr-2";
+
+                // Update Charts with Seasonal Data
+                updateCharts(state.currentVol, data.seasonal);
+
+                // ADD LAYER CONTROLS (Dynamic)
+                updateLayerControl(state.layers);
+
             } catch (err) {
                 console.error(err);
                 statusText.innerText = "Analysis Failed";
                 statusText.className = "text-red-600 font-bold";
                 statusDot.className = "w-2 h-2 rounded-full bg-red-500 mr-2";
             } finally {
-                 state.isScanning = false;
-                 scanner.style.display = 'none';
+                state.isScanning = false;
+                scanner.style.display = 'none';
             }
         }
 
-        function updateMetrics(area, vol, fillPct) {
+        let overlayLayers = {};
+
+        function updateLayerControl(layers) {
+            // Remove existing overlays
+            if (overlayLayers.group) {
+                state.map.removeLayer(overlayLayers.group);
+            }
+            overlayLayers.group = L.layerGroup().addTo(state.map);
+
+            const controlDiv = document.getElementById('layerControl');
+            controlDiv.innerHTML = '<h5 class="font-bold text-xs mb-2">Multi-Spectral Layers</h5>';
+            controlDiv.classList.remove('hidden');
+
+            const addLayerOption = (name, url, label, color) => {
+                if (!url) return;
+
+                const layer = L.tileLayer(url, { opacity: 0.8 });
+
+                const div = document.createElement('div');
+                div.className = "flex items-center mb-1 cursor-pointer";
+                div.innerHTML = `
+                    <input type="checkbox" id="layer_${name}" class="mr-2 h-3 w-3 text-cyan-600">
+                    <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${color}"></div>
+                    <label for="layer_${name}" class="text-xs text-slate-600 hover:text-cyan-800">${label}</label>
+                `;
+
+                div.onclick = (e) => {
+                    // Prevent double triggering from label+checkbox
+                    if (e.target.tagName !== 'INPUT') {
+                        document.getElementById(`layer_${name}`).click();
+                        return;
+                    }
+                    if (e.target.checked) {
+                        layer.addTo(overlayLayers.group);
+                    } else {
+                        overlayLayers.group.removeLayer(layer);
+                    }
+                };
+
+                controlDiv.appendChild(div);
+            };
+
+            addLayerOption('winter', layers.winter, 'Winter Spread (Jan-Feb)', '#0891b2');
+            addLayerOption('summer', layers.summer, 'Summer Spread (Apr-May)', '#fb923c');
+            addLayerOption('monsoon', layers.monsoon, 'Monsoon Spread (Aug-Sep)', '#16a34a');
+            addLayerOption('depth', layers.depth, 'Bathymetric Depth Map', '#0077b6');
+        }
+
+        function updateMetrics(area, vol, fillPct, elevation) {
             document.getElementById('metricArea').innerText = area;
             document.getElementById('metricVolume').innerText = vol;
-            
+
+            // Add Elevation visual
+            const volLabel = document.getElementById('metricVolume').parentElement.nextElementSibling;
+            volLabel.innerText = `Elev: ${elevation}m | Area × DEM Slope`;
+
             const fillBar = document.getElementById('fillBar');
             fillBar.style.width = `${fillPct}%`;
             document.getElementById('fillPct').innerText = `${fillPct}%`;
 
-            if(fillPct < 30) fillBar.className = "h-2 rounded-full transition-all duration-1000 bg-red-500";
-            else if(fillPct > 80) fillBar.className = "h-2 rounded-full transition-all duration-1000 bg-blue-600";
+            if (fillPct < 30) fillBar.className = "h-2 rounded-full transition-all duration-1000 bg-red-500";
+            else if (fillPct > 80) fillBar.className = "h-2 rounded-full transition-all duration-1000 bg-blue-600";
             else fillBar.className = "h-2 rounded-full transition-all duration-1000 bg-cyan-500";
-            
-            updateCharts(vol);
         }
 
         // --- Charting ---
@@ -368,9 +808,9 @@
             seasonalChart = new Chart(ctx2, {
                 type: 'bar',
                 data: {
-                    labels: ['Summer', 'Monsoon', 'Winter'],
+                    labels: ['Summer (Apr-May)', 'Monsoon (Aug-Sep)', 'Winter (Jan-Feb)'],
                     datasets: [{
-                        label: 'Avg Area (km²)',
+                        label: 'Water Spread (km²)',
                         data: [0, 0, 0],
                         backgroundColor: ['#f59e0b', '#3b82f6', '#06b6d4'],
                         borderRadius: 4
@@ -380,21 +820,25 @@
             });
         }
 
-        function updateCharts(currentVol) {
-            // Simulate history based on current volume
+        function updateCharts(currentVol, seasonalData) {
+            // Simulate trend history based on current volume (keeping this simulated for smooth line)
             const baseVol = parseFloat(currentVol);
             const history = [];
-            for(let i=0; i<12; i++) {
-                // Create a fake curve
+            for (let i = 0; i < 12; i++) {
                 history.push(baseVol * (0.8 + Math.random() * 0.4));
             }
             trendChart.data.datasets[0].data = history;
             trendChart.update();
 
-            // Update Seasonal
-            const area = parseFloat(state.currentArea);
-            seasonalChart.data.datasets[0].data = [area * 0.7, area * 1.2, area * 1.0];
-            seasonalChart.update();
+            // Update Seasonal with Real Data
+            if (seasonalData) {
+                seasonalChart.data.datasets[0].data = [
+                    seasonalData.summer,
+                    seasonalData.monsoon,
+                    seasonalData.winter
+                ];
+                seasonalChart.update();
+            }
         }
 
         // --- Gemini AI Integration ---
@@ -403,7 +847,7 @@
             const outputBox = document.getElementById('aiOutput');
             const outputText = document.getElementById('aiText');
 
-            if(state.currentVol == 0) {
+            if (state.currentVol == 0) {
                 alert("Please click a location on the map first!");
                 return;
             }
@@ -454,19 +898,24 @@
 
         // --- Nav ---
         function navTo(id) {
-            ['dashboard', 'analysis', 'methodology'].forEach(vid => {
-                document.getElementById(vid).classList.add('hidden');
-                document.getElementById('nav-'+vid).classList.remove('nav-active', 'text-cyan-600');
-                document.getElementById('nav-'+vid).classList.add('text-slate-600');
+            ['dashboard', 'analysis', 'methodology', 'data-mgmt'].forEach(vid => {
+                const el = document.getElementById(vid);
+                const navEl = document.getElementById('nav-' + vid);
+                if (el) el.classList.add('hidden');
+                if (navEl) {
+                    navEl.classList.remove('nav-active', 'text-cyan-600');
+                    navEl.classList.add('text-slate-600');
+                }
             });
             document.getElementById(id).classList.remove('hidden');
-            document.getElementById('nav-'+id).classList.add('nav-active', 'text-cyan-600');
-            
+            document.getElementById('nav-' + id).classList.add('nav-active', 'text-cyan-600');
+
             // Resize map if needed when tab switches
-            if(id === 'dashboard' && state.map) {
+            if (id === 'dashboard' && state.map) {
                 setTimeout(() => state.map.invalidateSize(), 200);
             }
         }
     </script>
 </body>
+
 </html>

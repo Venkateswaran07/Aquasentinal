@@ -1,0 +1,4 @@
+type,geometry/type,geometry/coordinates/0,geometry/coordinates/1,properties/prop0,geometry/coordinates/0/0,geometry/coordinates/0/1,geometry/coordinates/1/0,geometry/coordinates/1/1,geometry/coordinates/2/0,geometry/coordinates/2/1,geometry/coordinates/3/0,geometry/coordinates/3/1,properties/prop1,geometry/coordinates/0/0/0,geometry/coordinates/0/0/1,geometry/coordinates/0/1/0,geometry/coordinates/0/1/1,geometry/coordinates/0/2/0,geometry/coordinates/0/2/1,geometry/coordinates/0/3/0,geometry/coordinates/0/3/1,geometry/coordinates/0/4/0,geometry/coordinates/0/4/1,properties/prop1/this
+Feature,Point,102,0.5,value0,,,,,,,,,,,,,,,,,,,,
+Feature,LineString,,,value0,102,0,103,1,104,0,105,1,0,,,,,,,,,,,
+Feature,Polygon,,,value0,,,,,,,,,,100,0,101,0,101,1,100,1,100,0,that

@@ -1,3 +1,7 @@
 flask
 earthengine-api
 numpy
+pandas
+fpdf
+shapely
+matplotlib
