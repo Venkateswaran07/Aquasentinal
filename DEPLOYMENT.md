@@ -23,7 +23,7 @@ The backend must be deployed first so you can get the API URL.
     - Add `PYTHON_VERSION` = `3.9.16` (or similar).
     - Add `GEE_CREDENTIALS_JSON`: Paste the **entire content** of your Google Cloud Service Account JSON key file here.
 5. **Deploy**: Click "Create Web Service".
-6. **Copy URL**: Once live, copy your service URL (e.g., `https://waterbodies-monitoring-system.onrender.com`).
+6. **Copy URL**: Once live, copy your service URL (e.g., `https://aquasentinal-1.onrender.com`).
 
 ## 3. Frontend Deployment (Netlify)
 
@@ -32,7 +32,7 @@ The backend must be deployed first so you can get the API URL.
     - Paste your Render URL into the `production` field:
 
       ```javascript
-      production: 'https://waterbodies-monitoring-system.onrender.com'
+      production: 'https://aquasentinal-1.onrender.com'
       ```
 
     - Commit and push this change to GitHub.
