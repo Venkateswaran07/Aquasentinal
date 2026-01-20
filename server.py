@@ -11,6 +11,8 @@ CORS(app) # Enable CORS for all routes
 
 # --- GEE Authentication Helper for Render/Cloud ---
 # If GEE_CREDENTIALS_JSON env var exists, write it to a file
+gee_json = os.getenv('GEE_CREDENTIALS_JSON')
+if gee_json:
     import os
     # Use absolute path for the credentials file
     cred_path = os.path.join(os.getcwd(), "credentials.json")
