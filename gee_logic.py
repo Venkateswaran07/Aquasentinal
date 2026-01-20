@@ -21,6 +21,24 @@ def initialize_gee():
             pass
         
         # Attempt to initialize with project ID
+        # Attempt to initialize with project ID
+        # Explicitly check for Service Account env var set in server.py
+        sa_key = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+        
+        if sa_key and os.path.exists(sa_key):
+            try:
+                print(f"loading service account from: {sa_key}")
+                from google.oauth2 import service_account
+                credentials = service_account.Credentials.from_service_account_file(sa_key)
+                scoped_credentials = credentials.with_scopes(['https://www.googleapis.com/auth/earthengine'])
+                
+                print(f"Attempting to initialize GEE with Service Account and project: {GOOGLE_CLOUD_PROJECT}")
+                ee.Initialize(credentials=scoped_credentials, project=GOOGLE_CLOUD_PROJECT, opt_url='https://earthengine-highvolume.googleapis.com')
+                print(f"Google Earth Engine initialized successfully with Service Account.")
+                return
+            except Exception as e:
+                print(f"Service Account Auth failed: {e}. Falling back to default...")
+
         if GOOGLE_CLOUD_PROJECT:
             print(f"Attempting to initialize GEE with project: {GOOGLE_CLOUD_PROJECT}")
             ee.Initialize(project=GOOGLE_CLOUD_PROJECT, opt_url='https://earthengine-highvolume.googleapis.com')
