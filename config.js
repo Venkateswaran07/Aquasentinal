@@ -7,7 +7,7 @@ const API_CONFIG = {
 
     // Production Environment (Netlify -> Render)
     // REPLACE THIS URL with your actual Render Backend URL after deployment
-    production: 'https://waterbodies-monitoring-system.onrender.com'
+    production: 'https://aquasentinal-1.onrender.com'
 };
 
 // Automatically select URL based on current hostname
