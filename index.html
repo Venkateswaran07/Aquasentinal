@@ -675,6 +675,12 @@
             document.getElementById('fillBar').style.width = "0%";
             document.getElementById('aiOutput').classList.add('hidden');
 
+            // Cold Start Detector
+            const coldStartTimer = setTimeout(() => {
+                statusText.innerText = "Waking up Server (may take 60s)...";
+                statusText.className = "text-orange-500 font-bold animate-pulse";
+            }, 3000);
+
             try {
                 // Call Backend API
                 const response = await fetch(`${API_BASE_URL}/api/analyze`, {
@@ -682,6 +688,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ lat: state.currentLat, lng: state.currentLng })
                 });
+
+                clearTimeout(coldStartTimer); // Stop the cold start warning
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Server Error (${response.status}): ${errText}`);
+                }
 
                 const data = await response.json();
 
@@ -714,8 +727,19 @@
                 updateLayerControl(state.layers);
 
             } catch (err) {
+                clearTimeout(coldStartTimer);
                 console.error(err);
-                statusText.innerText = "Analysis Failed";
+
+                // Friendly User Error
+                let msg = "Analysis Failed";
+                if (err.message.includes('Failed to fetch')) {
+                    msg = "Connection Failed (Server Offline?)";
+                } else if (err.message.includes('500')) {
+                    msg = "Server Error (Check GEE Auth)";
+                    alert("Server Error: The backend failed to process the request. This usually means Google Earth Engine Authentication failed.");
+                }
+
+                statusText.innerText = msg;
                 statusText.className = "text-red-600 font-bold";
                 statusDot.className = "w-2 h-2 rounded-full bg-red-500 mr-2";
             } finally {
