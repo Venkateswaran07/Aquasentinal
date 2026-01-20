@@ -11,6 +11,7 @@
     <!-- Leaflet for Map Visualization -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="config.js"></script>
 
     <style>
         body {
@@ -430,14 +431,14 @@
                     </div>
 
                     <div class="flex gap-4">
-                        <a href="/api/download/pdf" target="_blank"
+                        <button onclick="downloadFile('pdf')"
                             class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-50 text-center flex items-center justify-center gap-2">
                             <span>📄 Download PDF Report</span>
-                        </a>
-                        <a href="/api/download/csv" target="_blank"
+                        </button>
+                        <button onclick="downloadFile('csv')"
                             class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-50 text-center flex items-center justify-center gap-2">
                             <span>📊 Download CSV Data</span>
-                        </a>
+                        </button>
                     </div>
 
                     <div class="mt-6">
@@ -465,7 +466,8 @@
 
     <script>
         // --- Gemini Configuration ---
-        const apiURL = "/api/gemini"; // Use backend proxy for Gemini API
+        // --- Gemini Configuration ---
+        const apiURL = `${API_BASE_URL}/api/gemini`; // Use backend proxy for Gemini API
 
         // --- State ---
         const state = {
@@ -531,7 +533,7 @@
             formData.append('bathymetry', dFile);
 
             try {
-                const response = await fetch('/api/upload_process', {
+                const response = await fetch(`${API_BASE_URL}/api/upload_process`, {
                     method: 'POST',
                     body: formData
                 });
@@ -603,6 +605,12 @@
             document.body.removeChild(link);
         }
 
+        // New Helper for Backend Downloads
+        function downloadFile(type) {
+            const url = `${API_BASE_URL}/api/download/${type}`;
+            window.open(url, '_blank');
+        }
+
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
@@ -669,7 +677,7 @@
 
             try {
                 // Call Backend API
-                const response = await fetch('/api/analyze', {
+                const response = await fetch(`${API_BASE_URL}/api/analyze`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ lat: state.currentLat, lng: state.currentLng })

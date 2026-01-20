@@ -1,12 +1,22 @@
 
 
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 from gee_logic import initialize_gee, analyze_water
 import requests
+import os
 
 app = Flask(__name__, template_folder='.')
+CORS(app) # Enable CORS for all routes
 
-
+# --- GEE Authentication Helper for Render/Cloud ---
+# If GEE_CREDENTIALS_JSON env var exists, write it to a file
+gee_json = os.getenv('GEE_CREDENTIALS_JSON')
+if gee_json:
+    print("Found GEE_CREDENTIALS_JSON env var, creating credentials.json...")
+    with open("credentials.json", "w") as f:
+        f.write(gee_json)
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "credentials.json"
 
 # Initialize GEE on startup
 initialize_gee()

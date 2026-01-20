@@ -5,3 +5,5 @@ pandas
 fpdf
 shapely
 matplotlib
+flask-cors
+gunicorn
