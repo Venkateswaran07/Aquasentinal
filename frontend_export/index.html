@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaSense | UI Template</title>
+
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <!-- Custom Config & Styles -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Extra tweaks for standalone usage */
+        body {
+            background-color: #0b1120;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Navigation (Glass) -->
+    <nav class="h-16 glass-panel z-50 flex items-center justify-between px-6 border-b-0 border-white/5">
+        <div class="flex items-center space-x-3">
+            <div
+                class="w-8 h-8 rounded bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                <span class="text-white font-bold text-lg">A</span>
+            </div>
+            <h1 class="font-bold text-xl tracking-wide">Aqua<span class="text-cyan-400 font-light">Sentinal</span></h1>
+        </div>
+
+        <div class="flex space-x-1 bg-white/5 p-1 rounded-lg border border-white/5">
+            <button onclick="navTo('dashboard')" id="nav-dashboard"
+                class="nav-link px-4 py-1.5 text-sm rounded transition-all text-cyan-400 bg-white/5">Monitor</button>
+            <button onclick="navTo('analysis')" id="nav-analysis"
+                class="nav-link px-4 py-1.5 text-sm rounded transition-all text-slate-400 hover:text-white">Analytics</button>
+            <button onclick="navTo('methodology')" id="nav-methodology"
+                class="nav-link px-4 py-1.5 text-sm rounded transition-all text-slate-400 hover:text-white">Methodology</button>
+            <button onclick="navTo('data-mgmt')" id="nav-data-mgmt"
+                class="nav-link px-4 py-1.5 text-sm rounded transition-all text-slate-400 hover:text-white">Upload</button>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div class="flex flex-col items-end text-xs text-slate-400">
+                <span>SYSTEM STATUS</span>
+                <span class="text-green-400 font-mono">ONLINE ●</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex relative overflow-hidden">
+
+        <!-- DASHBOARD View -->
+        <section id="dashboard" class="absolute inset-0 flex p-4 gap-4 w-full h-full">
+
+            <!-- Left Panel: Controls & Live Data -->
+            <div class="w-80 flex flex-col gap-4 z-40 pointer-events-none">
+                <!-- Analysis Mode -->
+                <div class="glass-card p-4 rounded-xl pointer-events-auto">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Acquisition Mode</h3>
+                    <div class="flex gap-2">
+                        <button onclick="setMode('click')" id="btn-mode-click"
+                            class="mode-btn flex-1 py-2 text-xs font-bold rounded border border-cyan-400 bg-cyan-500 text-white transition-all">Target</button>
+                        <button onclick="setMode('draw')" id="btn-mode-draw"
+                            class="mode-btn flex-1 py-2 text-xs font-bold rounded border border-slate-700 bg-slate-800/50 text-slate-300 transition-all hover:bg-slate-700">Scan</button>
+                    </div>
+                </div>
+
+                <!-- Live Metrics -->
+                <div class="glass-card p-5 rounded-xl flex-1 flex flex-col gap-6 pointer-events-auto">
+                    <h3
+                        class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-white/10 pb-2">
+                        Telemetry</h3>
+
+                    <div>
+                        <div class="text-slate-400 text-xs mb-1">SURFACE AREA</div>
+                        <div class="text-3xl font-light font-mono text-white" id="metricArea">--<span
+                                class="text-sm text-slate-500 ml-1">km²</span></div>
+                        <div class="h-1 w-full bg-slate-800 mt-2 rounded overflow-hidden">
+                            <div class="h-full bg-cyan-500 w-0 transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-slate-400 text-xs mb-1">ESTIMATED VOLUME</div>
+                        <div class="text-3xl font-light font-mono text-white" id="metricVolume">--<span
+                                class="text-sm text-slate-500 ml-1">MCM</span></div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">CAPACITY FILL</span>
+                            <span class="text-white font-mono" id="fillPct">0%</span>
+                        </div>
+                        <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                            <div id="fillBar"
+                                class="h-full bg-cyan-500 w-0 shadow-[0_0_10px_rgba(6,182,212,0.5)] transition-all duration-1000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <div class="flex justify-between text-xs text-slate-400 mb-2">
+                            <span>AVG ELEVATION</span>
+                            <span class="font-mono text-white" id="metricElev">--</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-400">
+                            <span>COORDINATES</span>
+                            <span class="font-mono text-cyan-400"><span id="dispLat">0.00</span>, <span
+                                    id="dispLon">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layer Control (Hidden initially) -->
+                <div id="layerControlPanel"
+                    class="glass-card p-4 rounded-xl pointer-events-auto hidden animate-slide-up">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Spectral Layers</h3>
+                    <div id="layerControl" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- Map Area -->
+            <div class="flex-1 relative rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+                <div id="map" class="w-full h-full z-10"></div>
+
+                <!-- Floating AI Button -->
+                <div class="absolute top-4 right-4 z-20">
+                    <button
+                        class="btn-primary px-5 py-2.5 rounded-lg text-sm font-bold text-white flex items-center gap-2 backdrop-blur-md">
+                        <span>✨ AI Analysis</span>
+                    </button>
+                </div>
+
+                <!-- Scanning Overlay -->
+                <div id="scanning-overlay" class="scanning-overlay">
+                    <div class="tech-ring mb-6"></div>
+                    <div class="text-cyan-400 font-mono text-lg tracking-[0.2em] font-bold animate-pulse"
+                        id="scan-status">INITIALIZING...</div>
+                    <button onclick="cancelScanning()"
+                        class="mt-4 px-4 py-1.5 rounded border border-red-500/50 text-red-400 hover:bg-red-500/10 text-xs uppercase tracking-wider transition-colors">Cancel
+                        Analysis</button>
+                    <div class="scanner-line"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ANALYTICS View -->
+        <section id="analysis" class="absolute inset-0 p-8 hidden overflow-y-auto">
+            <div class="max-w-6xl mx-auto space-y-6">
+                <!-- Content Placeholder -->
+                <div class="glass-card p-8 rounded-xl text-center">
+                    <h2 class="text-2xl font-bold mb-4">Analytics Dashboard Template</h2>
+                    <p class="text-slate-400">This section is ready for your charts. Use Chart.js or D3.js here.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- METHODOLOGY View -->
+        <section id="methodology" class="absolute inset-0 p-8 hidden overflow-y-auto">
+            <div class="max-w-4xl mx-auto space-y-8">
+                <!-- Content Placeholder -->
+                <div class="glass-card p-8 rounded-xl">
+                    <h2
+                        class="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-6">
+                        Scientific Methodology</h2>
+                    <p class="text-slate-400">Documentation content goes here.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- UPLOAD View -->
+        <section id="data-mgmt" class="absolute inset-0 p-8 hidden flex items-center justify-center">
+            <div class="glass-card p-8 rounded-xl max-w-2xl w-full text-center">
+                <h2 class="text-2xl font-bold mb-2">Upload Interface</h2>
+                <div class="border-2 border-dashed border-slate-700 rounded-lg p-12 mt-6">
+                    <span class="text-3xl block mb-2">📂</span>
+                    <span class="text-sm font-bold text-slate-300">Drag & Drop Files Here</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Global Toast -->
+    <div id="toast-notification"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-700 transform transition-all duration-300 translate-y-20 opacity-0 z-50 flex items-center gap-3">
+        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+        <span id="toast-msg">Notification</span>
+    </div>
+
+    <!-- Script for UI Logic (No Backend) -->
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -12,8 +12,8 @@ const API_CONFIG = {
 
 // Automatically select URL based on current hostname
 const getApiUrl = () => {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocal ? '' : API_CONFIG.production;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
+    return isLocal ? API_CONFIG.development : API_CONFIG.production;
 };
 
 const API_BASE_URL = getApiUrl();

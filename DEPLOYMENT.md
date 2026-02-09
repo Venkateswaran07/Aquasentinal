@@ -22,6 +22,7 @@ The backend must be deployed first so you can get the API URL.
 4. **Environment Variables** (Crucial!):
     - Add `PYTHON_VERSION` = `3.9.16` (or similar).
     - Add `GEE_CREDENTIALS_JSON`: Paste the **entire content** of your Google Cloud Service Account JSON key file here.
+    - Add `GEMINI_API_KEY`: Your Google Gemini API Key (get it from aistudio.google.com).
 5. **Deploy**: Click "Create Web Service".
 6. **Copy URL**: Once live, copy your service URL (e.g., `https://aquasentinal-1.onrender.com`).
 

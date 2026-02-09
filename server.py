@@ -12,6 +12,7 @@ CORS(app) # Enable CORS for all routes
 # --- GEE Authentication Helper for Render/Cloud ---
 # If GEE_CREDENTIALS_JSON env var exists, write it to a file
 gee_json = os.getenv('GEE_CREDENTIALS_JSON')
+
 if gee_json:
     import os
     # Use absolute path for the credentials file
@@ -27,6 +28,10 @@ initialize_gee()
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/config.js')
+def serve_config():
+    return send_from_directory('.', 'config.js')
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
@@ -46,8 +51,32 @@ def analyze():
     except Exception as e:
         import traceback
         print("Exception during analysis:")
-        traceback.print_exc()
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+        tb = traceback.format_exc()
+        print(tb)
+        return jsonify({"error": f"Internal server error: {str(e)}", "details": tb}), 500
+
+# --- Gemini AI Proxy ---
+@app.route('/api/gemini', methods=['POST'])
+def gemini_proxy():
+    api_key = "AIzaSyD1_IBQzq4TbQvxowjIlv0q9fmSetaOPaA"
+    if not api_key:
+        print("Error: GEMINI_API_KEY not found in environment variables.")
+        return jsonify({"error": "Server configuration error: GEMINI_API_KEY missing."}), 500
+    
+    data = request.json
+    # Proxy the request to Google Gemini API
+    # Using gemini-1.5-flash for speed
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    
+    try:
+        response = requests.post(url, json=data, headers={'Content-Type': 'application/json'})
+        if response.status_code != 200:
+             print(f"Gemini API Error: {response.text}")
+             return jsonify({"error": f"Gemini API Error: {response.text}"}), response.status_code
+        return jsonify(response.json())
+    except Exception as e:
+        print(f"Proxy Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # --- File Upload & Processing API ---
 from data_processor import DataProcessor

@@ -7,3 +7,4 @@ shapely
 matplotlib
 flask-cors
 gunicorn
+requests

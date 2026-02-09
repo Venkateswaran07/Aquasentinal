@@ -4,950 +4,348 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AquaSense: Realtime GEE Water Analysis</title>
+    <title>AquaSense | Advanced Water Monitoring</title>
+
+    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Leaflet for Map Visualization -->
+
+    <!-- Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <!-- Custom Config & Styles -->
     <script src="config.js"></script>
-
-    <style>
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
-        }
-
-        .chart-container {
-            position: relative;
-            width: 100%;
-            height: 250px;
-        }
-
-        /* Map is now taller and central */
-        .map-container {
-            position: relative;
-            width: 100%;
-            height: 500px;
-            z-index: 10;
-            border-radius: 0.75rem;
-            overflow: hidden;
-            cursor: crosshair;
-        }
-
-        .nav-active {
-            border-bottom: 2px solid #06b6d4;
-            color: #0891b2;
-            font-weight: 600;
-        }
-
-        .step-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-
-        .transition-all {
-            transition-property: all;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 300ms;
-        }
-
-        .prose h3 {
-            font-size: 1.1em;
-            font-weight: bold;
-            margin-top: 1em;
-            color: #0f172a;
-        }
-
-        .prose ul {
-            list-style-type: disc;
-            padding-left: 1.5em;
-            margin-top: 0.5em;
-        }
-
-        .prose strong {
-            color: #0891b2;
-        }
-
-        /* Scanning Animation Overlay */
-        .scanner-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(6, 182, 212, 0.1);
-            pointer-events: none;
-            display: none;
-            z-index: 1000;
-        }
-
-        .scan-line {
-            width: 100%;
-            height: 2px;
-            background: #06b6d4;
-            box-shadow: 0 0 10px #06b6d4;
-            animation: scan 2s linear infinite;
-        }
-
-        @keyframes scan {
-            0% {
-                transform: translateY(0);
-            }
-
-            100% {
-                transform: translateY(500px);
-            }
-        }
-
-        /* Print Styles */
-        @media print {
-            @page {
-                size: landscape;
-                margin: 1cm;
-            }
-
-            body {
-                background: white;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            nav,
-            .nav-btn,
-            .hidden-print,
-            button,
-            #statusIndicator,
-            .scanner-overlay {
-                display: none !important;
-            }
-
-            #dashboard,
-            #analysis {
-                display: block !important;
-                page-break-inside: avoid;
-            }
-
-            #methodology {
-                display: none !important;
-            }
-
-            .map-container {
-                height: 400px;
-                border: 1px solid #ccc;
-            }
-
-            .shadow-md,
-            .shadow-sm {
-                box-shadow: none !important;
-                border: 1px solid #ddd;
-            }
-
-            main {
-                padding: 0;
-                margin: 0;
-                max-width: 100%;
-            }
-
-            /* Ensure charts and maps are visible */
-            canvas,
-            .leaflet-container {
-                max-width: 100% !important;
-            }
-
-            /* Layout adjustments for print */
-            .grid-cols-1 {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
-            }
-
-            .print-break-inside {
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
-
-            #aiOutput {
-                display: block !important;
-                border: 1px solid #ddd;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
-<body class="bg-slate-50 flex flex-col h-screen">
+<body class="bg-gray-900 text-white h-screen flex flex-col overflow-hidden">
 
-    <!-- Navigation -->
-    <nav class="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm flex-none">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <span class="text-2xl mr-2">💧</span>
-                    <h1 class="text-xl font-bold text-slate-800 tracking-tight">AquaSense <span
-                            class="text-cyan-600 font-light">| Live Monitor</span></h1>
-                </div>
-                <div class="hidden sm:flex space-x-8 items-center">
-                    <button onclick="navTo('dashboard')" id="nav-dashboard"
-                        class="nav-btn nav-active px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Map
-                        Interface</button>
-                    <button onclick="navTo('analysis')" id="nav-analysis"
-                        class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Detailed
-                        Analytics</button>
-                    <button onclick="navTo('data-mgmt')" id="nav-data-mgmt"
-                        class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Data
-                        Management</button>
-                    <button onclick="navTo('methodology')" id="nav-methodology"
-                        class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 transition-colors">Methodology</button>
-                </div>
+    <!-- Top Navigation (Glass) -->
+    <nav class="h-16 glass-panel z-50 flex items-center justify-between px-6 border-b-0 border-white/5">
+        <div class="flex items-center space-x-3">
+            <div
+                class="w-8 h-8 rounded bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                <span class="text-white font-bold text-lg">A</span>
+            </div>
+            <h1 class="font-bold text-xl tracking-wide">Aqua<span class="text-cyan-400 font-light">Sentinal</span></h1>
+        </div>
+
+        <div class="flex space-x-1 bg-white/5 p-1 rounded-lg border border-white/5">
+            <button onclick="navTo('dashboard')" id="nav-dashboard"
+                class="nav-link px-4 py-1.5 text-sm rounded transition-all text-cyan-400 bg-white/5">Monitor</button>
+            <button onclick="navTo('analysis')" id="nav-analysis"
+                class="nav-link px-4 py-1.5 text-sm rounded transition-all text-slate-400 hover:text-white">Analytics</button>
+            <button onclick="navTo('methodology')" id="nav-methodology"
+                class="nav-link px-4 py-1.5 text-sm rounded transition-all text-slate-400 hover:text-white">Methodology</button>
+            <button onclick="navTo('data-mgmt')" id="nav-data-mgmt"
+                class="nav-link px-4 py-1.5 text-sm rounded transition-all text-slate-400 hover:text-white">Upload</button>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div class="flex flex-col items-end text-xs text-slate-400">
+                <span>SYSTEM STATUS</span>
+                <span class="text-green-400 font-mono">ONLINE ●</span>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 w-full overflow-y-auto">
+    <!-- Main Workspace -->
+    <main class="flex-1 flex relative overflow-hidden">
 
-        <!-- DASHBOARD VIEW -->
-        <section id="dashboard" class="space-y-6 animate-fade-in h-full">
+        <!-- DASHBOARD View -->
+        <section id="dashboard" class="absolute inset-0 flex p-4 gap-4 w-full h-full">
 
-            <!-- Map Container -->
-            <div class="bg-white p-1 rounded-xl shadow-md border border-slate-200 relative">
-                <div id="map" class="map-container"></div>
-
-                <!-- Scanner Animation (Hidden by default) -->
-                <div id="scanner" class="scanner-overlay flex flex-col justify-center">
-                    <div class="scan-line"></div>
+            <!-- Left Panel: Controls & Live Data -->
+            <div class="w-80 flex flex-col gap-4 z-40 pointer-events-none">
+                <!-- Analysis Mode -->
+                <div class="glass-card p-4 rounded-xl pointer-events-auto">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Acquisition Mode</h3>
+                    <div class="flex gap-2">
+                        <button onclick="setMode('click')" id="btn-mode-click"
+                            class="mode-btn flex-1 py-2 text-xs font-bold rounded border border-cyan-400 bg-cyan-500 text-white transition-all">
+                            Target
+                        </button>
+                        <button onclick="setMode('draw')" id="btn-mode-draw"
+                            class="mode-btn flex-1 py-2 text-xs font-bold rounded border border-slate-700 bg-slate-800/50 text-slate-300 transition-all hover:bg-slate-700">
+                            Scan
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Floating Controls -->
-                <div
-                    class="absolute top-4 right-4 z-[500] bg-white/90 backdrop-blur p-4 rounded-lg shadow-lg border border-slate-200 w-72">
-                    <h4 class="font-bold text-slate-700 text-sm mb-2">Live Analysis Control</h4>
-                    <p class="text-xs text-slate-500 mb-3">Click any water body to calculate volume.</p>
+                <!-- Live Metrics -->
+                <div class="glass-card p-5 rounded-xl flex-1 flex flex-col gap-6 pointer-events-auto">
+                    <h3
+                        class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-white/10 pb-2">
+                        Telemetry</h3>
 
-                    <div class="flex items-center justify-between text-xs mb-2">
-                        <span class="font-semibold text-slate-600">Lat:</span>
-                        <span id="dispLat" class="font-mono text-slate-500">--</span>
-                    </div>
-                    <div class="flex items-center justify-between text-xs mb-4">
-                        <span class="font-semibold text-slate-600">Lon:</span>
-                        <span id="dispLon" class="font-mono text-slate-500">--</span>
-                    </div>
-
-                    <div id="statusIndicator" class="flex items-center p-2 bg-slate-100 rounded text-xs mb-3">
-                        <div id="statusDot" class="w-2 h-2 rounded-full bg-slate-400 mr-2"></div>
-                        <span id="statusText">Ready to Scan</span>
+                    <div>
+                        <div class="text-slate-400 text-xs mb-1">SURFACE AREA</div>
+                        <div class="text-3xl font-light font-mono text-white" id="metricArea">--<span
+                                class="text-sm text-slate-500 ml-1">km²</span></div>
+                        <div class="h-1 w-full bg-slate-800 mt-2 rounded overflow-hidden">
+                            <div class="h-full bg-cyan-500 w-0 transition-all duration-1000" style="width: 0%"></div>
+                        </div>
                     </div>
 
-                    <!-- Layer Control Panel (Dynamic) -->
-                    <div id="layerControl" class="hidden border-t border-slate-200 pt-3">
-                        <!-- Filled by JS -->
+                    <div>
+                        <div class="text-slate-400 text-xs mb-1">ESTIMATED VOLUME</div>
+                        <div class="text-3xl font-light font-mono text-white" id="metricVolume">--<span
+                                class="text-sm text-slate-500 ml-1">MCM</span></div>
                     </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">CAPACITY FILL</span>
+                            <span class="text-white font-mono" id="fillPct">0%</span>
+                        </div>
+                        <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                            <div id="fillBar"
+                                class="h-full bg-cyan-500 w-0 shadow-[0_0_10px_rgba(6,182,212,0.5)] transition-all duration-1000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <div class="flex justify-between text-xs text-slate-400 mb-2">
+                            <span>AVG ELEVATION</span>
+                            <span class="font-mono text-white" id="metricElev">--</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-400">
+                            <span>COORDINATES</span>
+                            <span class="font-mono text-cyan-400"><span id="dispLat">0.00</span>, <span
+                                    id="dispLon">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layer Control (Hidden initially) -->
+                <div id="layerControlPanel"
+                    class="glass-card p-4 rounded-xl pointer-events-auto hidden animate-slide-up">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Spectral Layers</h3>
+                    <div id="layerControl" class="space-y-2"></div>
                 </div>
             </div>
 
-            <!-- Quick Stats Panel (Updates on click) -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <!-- Metric 1 -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                    <p class="text-xs text-slate-500 font-bold uppercase">Spread Area</p>
-                    <div class="flex items-end mt-1">
-                        <span id="metricArea" class="text-2xl font-bold text-slate-800">--</span>
-                        <span class="text-xs text-slate-400 ml-1 mb-1">km²</span>
-                    </div>
-                    <div class="text-[10px] text-green-600 mt-1">Using NDWI Index</div>
-                </div>
-                <!-- Metric 2 -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                    <p class="text-xs text-slate-500 font-bold uppercase">Volume Est.</p>
-                    <div class="flex items-end mt-1">
-                        <span id="metricVolume" class="text-2xl font-bold text-cyan-600">--</span>
-                        <span class="text-xs text-slate-400 ml-1 mb-1">MCM</span>
-                    </div>
-                    <div class="text-[10px] text-slate-400 mt-1">Area × Bathymetry</div>
-                </div>
-                <!-- Metric 3 -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                    <p class="text-xs text-slate-500 font-bold uppercase">Fill Level</p>
-                    <div class="w-full bg-slate-200 rounded-full h-2 mt-2">
-                        <div id="fillBar" class="bg-cyan-500 h-2 rounded-full w-0 transition-all duration-1000"></div>
-                    </div>
-                    <div class="flex justify-between mt-1 text-[10px] text-slate-500">
-                        <span id="fillPct">0%</span>
-                        <span>Capacity</span>
-                    </div>
-                </div>
-                <!-- AI Action -->
-                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-center">
+            <!-- Map Area -->
+            <div class="flex-1 relative rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+                <div id="map" class="w-full h-full z-10"></div>
+
+                <!-- Floating AI Button -->
+                <div class="absolute top-4 right-4 z-20">
                     <button onclick="generateAIReport()" id="aiBtn"
-                        class="text-xs font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-600 hover:text-white py-2 px-4 rounded shadow-sm transition-colors flex items-center justify-center gap-2">
-                        <span>✨ Analyze Location with AI</span>
+                        class="btn-primary px-5 py-2.5 rounded-lg text-sm font-bold text-white flex items-center gap-2 backdrop-blur-md">
+                        <span>✨ AI Analysis</span>
                     </button>
+                    <button onclick="triggerAI()"
+                        class="mt-2 text-xs text-slate-500 hover:text-cyan-400 underline w-full text-right block">Simulate</button>
                 </div>
-            </div>
 
-            <!-- AI Output Area -->
-            <div id="aiOutput" class="hidden bg-white p-6 rounded-xl border-l-4 border-indigo-500 shadow-sm relative">
-                <button onclick="document.getElementById('aiOutput').classList.add('hidden')"
-                    class="absolute top-2 right-2 text-slate-300 hover:text-slate-500">✕</button>
-                <h4 class="font-bold text-indigo-800 mb-2 flex items-center"><span class="mr-2">✨</span> Hydrological
-                    Report</h4>
-                <div id="aiText" class="prose prose-sm max-w-none text-slate-600"></div>
-            </div>
-        </section>
-
-        <!-- ANALYTICS VIEW -->
-        <section id="analysis" class="hidden space-y-6 animate-fade-in">
-            <!-- Actions -->
-            <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
-                <button onclick="downloadCSV()"
-                    class="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors">
-                    <span>📊</span>
-                    <span class="text-sm font-bold">Export CSV</span>
-                </button>
-                <button onclick="window.print()"
-                    class="flex items-center space-x-2 px-4 py-2 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
-                    <span>🖨️</span>
-                    <span class="text-sm font-bold">Print / Save PDF</span>
-                </button>
-            </div>
-
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 print-break-inside">
-                <div class="flex justify-between items-center mb-6">
-                    <h4 class="font-bold text-slate-700">Historical Volume Trend (Simulated)</h4>
-                </div>
-                <div class="chart-container">
-                    <canvas id="trendChart"></canvas>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 print-break-inside">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <h4 class="font-bold text-slate-700 mb-4">Seasonal Comparison</h4>
-                    <div class="chart-container">
-                        <canvas id="seasonalChart"></canvas>
-                    </div>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <h4 class="font-bold text-slate-700 mb-4">Prediction Confidence</h4>
-                    <div class="flex items-center justify-center h-48">
-                        <div class="text-center">
-                            <div class="text-4xl font-bold text-green-600 mb-1">94.2%</div>
-                            <div class="text-sm text-slate-500">Model Accuracy</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- METHODOLOGY VIEW -->
-        <section id="methodology" class="hidden space-y-6 animate-fade-in print-hidden">
-            <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100">
-                <h3 class="text-2xl font-bold text-slate-800 mb-6">How It Works</h3>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="p-4 border border-slate-200 rounded-lg hover:border-cyan-400 transition-colors">
-                        <div class="text-2xl mb-2">🛰️</div>
-                        <h4 class="font-bold text-sm">1. Sentinel-2 Input</h4>
-                        <p class="text-xs text-slate-500 mt-1">System fetches multispectral tiles for clicked
-                            coordinates.</p>
-                    </div>
-                    <div class="p-4 border border-slate-200 rounded-lg hover:border-cyan-400 transition-colors">
-                        <div class="text-2xl mb-2">🌊</div>
-                        <h4 class="font-bold text-sm">2. NDWI Index</h4>
-                        <p class="text-xs text-slate-500 mt-1">Calculates (Green - NIR)/(Green + NIR) to detect water.
-                        </p>
-                    </div>
-                    <div class="p-4 border border-slate-200 rounded-lg hover:border-cyan-400 transition-colors">
-                        <div class="text-2xl mb-2">⛰️</div>
-                        <h4 class="font-bold text-sm">3. DEM Overlay</h4>
-                        <p class="text-xs text-slate-500 mt-1">Intersects water mask with SRTM Elevation data.</p>
-                    </div>
-                    <div class="p-4 border border-slate-200 rounded-lg hover:border-cyan-400 transition-colors">
-                        <div class="text-2xl mb-2">📊</div>
-                        <h4 class="font-bold text-sm">4. Calculation</h4>
-                        <p class="text-xs text-slate-500 mt-1">Outputs total surface area and estimated volume.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- DATA MANAGEMENT VIEW -->
-        <section id="data-mgmt" class="hidden space-y-6 animate-fade-in print-break-inside">
-            <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100">
-                <h3 class="text-2xl font-bold text-slate-800 mb-2">Upload Geospatial Data</h3>
-                <p class="text-slate-500 text-sm mb-6">Upload local datasets to calibrate volume estimation.</p>
-
-                <form id="uploadForm" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Boundary Input -->
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Reservoir Boundary
-                                (GeoJSON)</label>
-                            <div class="flex items-center justify-center w-full">
-                                <label for="boundaryFile"
-                                    class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <div class="text-3xl mb-2">📍</div>
-                                        <p class="text-sm text-slate-500"><span class="font-semibold">Click to
-                                                upload</span> GeoJSON</p>
-                                    </div>
-                                    <input id="boundaryFile" name="boundary" type="file" class="hidden"
-                                        accept=".json,.geojson" />
-                                </label>
-                            </div>
-                            <div id="boundFileName" class="text-xs text-green-600 mt-2 font-mono h-4"></div>
-                        </div>
-
-                        <!-- Bathymetry Input -->
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Bathymetry Points (CSV)</label>
-                            <div class="flex items-center justify-center w-full">
-                                <label for="bathyFile"
-                                    class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <div class="text-3xl mb-2">📉</div>
-                                        <p class="text-sm text-slate-500"><span class="font-semibold">Click to
-                                                upload</span> CSV (Lat, Lon, Elev)</p>
-                                    </div>
-                                    <input id="bathyFile" name="bathymetry" type="file" class="hidden" accept=".csv" />
-                                </label>
-                            </div>
-                            <div id="bathyFileName" class="text-xs text-green-600 mt-2 font-mono h-4"></div>
-                        </div>
-                    </div>
-
-                    <button type="button" onclick="processUpload()" id="processBtn"
-                        class="w-full bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 transition-colors flex items-center justify-center gap-2">
-                        <span>🚀 Process Data & Generate Report</span>
+                <!-- Scanning Overlay (The "Analysing UI") -->
+                <div id="scanning-overlay" class="scanning-overlay">
+                    <div class="tech-ring mb-6"></div>
+                    <div class="text-cyan-400 font-mono text-lg tracking-[0.2em] font-bold animate-pulse"
+                        id="scan-status">INITIALIZING...</div>
+                    <button onclick="cancelScanning()"
+                        class="mt-4 px-4 py-1.5 rounded border border-red-500/50 text-red-400 hover:bg-red-500/10 text-xs uppercase tracking-wider transition-colors">
+                        Cancel Analysis
                     </button>
-                </form>
+                    <div class="scanner-line"></div>
+                </div>
+            </div>
+        </section>
 
-                <!-- Results Container -->
-                <div id="uploadResults" class="hidden mt-8 border-t border-slate-100 pt-6">
-                    <h4 class="font-bold text-slate-800 mb-4">Processing Results</h4>
-                    <div class="bg-green-50 text-green-800 p-4 rounded-lg mb-4 text-sm">
-                        Analyzed <span id="resPoints" class="font-bold">--</span> elevation points.
-                        Max Capacity: <span id="resVol" class="font-bold">--</span> MCM.
-                    </div>
+        <!-- ANALYTICS View -->
+        <section id="analysis" class="absolute inset-0 p-8 hidden overflow-y-auto">
+            <div class="max-w-6xl mx-auto space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">Detailed Analytics</h2>
+                    <button onclick="window.print()" class="btn-glass px-4 py-2 rounded text-sm">Download
+                        Report</button>
+                </div>
 
-                    <div class="flex gap-4">
-                        <button onclick="downloadFile('pdf')"
-                            class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-50 text-center flex items-center justify-center gap-2">
-                            <span>📄 Download PDF Report</span>
-                        </button>
-                        <button onclick="downloadFile('csv')"
-                            class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-50 text-center flex items-center justify-center gap-2">
-                            <span>📊 Download CSV Data</span>
-                        </button>
-                    </div>
-
-                    <div class="mt-6">
-                        <h5 class="font-bold text-xs text-slate-500 uppercase mb-2">Detailed Table (Preview)</h5>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-sm text-left text-slate-500">
-                                <thead class="text-xs text-slate-700 uppercase bg-slate-50">
-                                    <tr>
-                                        <th class="px-4 py-2">Elevation (m)</th>
-                                        <th class="px-4 py-2">Area (km²)</th>
-                                        <th class="px-4 py-2">Volume (MCM)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="resTableBody">
-                                    <!-- Rows -->
-                                </tbody>
-                            </table>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card p-6 rounded-xl">
+                        <h3 class="text-sm font-bold text-slate-400 mb-4">VOLUME TREND FORECAST</h3>
+                        <div class="h-64">
+                            <canvas id="trendChart"></canvas>
                         </div>
                     </div>
+                    <div class="glass-card p-6 rounded-xl">
+                        <h3 class="text-sm font-bold text-slate-400 mb-4">SEASONAL COMPARISON</h3>
+                        <div class="h-64">
+                            <canvas id="seasonalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- METHODOLOGY View -->
+        <section id="methodology" class="absolute inset-0 p-8 hidden overflow-y-auto">
+            <div class="max-w-4xl mx-auto space-y-8">
+                <div class="glass-card p-8 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <svg class="w-32 h-32 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                        </svg>
+                    </div>
+                    <h2
+                        class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-6">
+                        Scientific Methodology</h2>
+
+                    <div class="space-y-8">
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                <span
+                                    class="w-6 h-6 rounded bg-cyan-500 text-black flex items-center justify-center text-xs font-bold">1</span>
+                                Satellite Data Acquisition
+                            </h3>
+                            <p class="text-slate-400 leading-relaxed ml-8">
+                                We utilize <strong>Sentinel-2 MSI</strong> (Multi-Spectral Instrument) data from the
+                                Copernicus program.
+                                The system automatically filters for the least cloudy images (< 20% cloud cover) within
+                                    the last 90 days for current analysis, and aggregates seasonal data (Winter, Summer,
+                                    Monsoon) from the previous year. </p>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                <span
+                                    class="w-6 h-6 rounded bg-cyan-500 text-black flex items-center justify-center text-xs font-bold">2</span>
+                                Water Surface Extraction (NDWI)
+                            </h3>
+                            <p class="text-slate-400 leading-relaxed ml-8">
+                                The <strong>Normalized Difference Water Index (NDWI)</strong> is calculated using the
+                                Green (B3) and Near-Infrared (B8) bands:
+                                <br>
+                                <code
+                                    class="bg-slate-800 px-2 py-1 rounded text-cyan-400 text-sm mt-2 block w-fit">NDWI = (Green - NIR) / (Green + NIR)</code>
+                                <br>
+                                Pixels with NDWI > 0.1 are classified as water. This dynamic thresholding allows for
+                                precise delineation of water body boundaries.
+                            </p>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                <span
+                                    class="w-6 h-6 rounded bg-cyan-500 text-black flex items-center justify-center text-xs font-bold">3</span>
+                                Volumetric Estimation Model
+                            </h3>
+                            <div class="ml-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                                <div class="text-slate-400 leading-relaxed">
+                                    <p class="mb-2">Since satellite imagery only provides surface area, we estimate
+                                        volume using a <strong>Conical Depression Model</strong> augmented by terrain
+                                        slope.</p>
+                                    <ul class="list-disc ml-4 space-y-1 text-sm">
+                                        <li><strong>Surface Elevation:</strong> Derived from NASADEM superimposed on
+                                            water pixels.</li>
+                                        <li><strong>Slope Analysis:</strong> Surrounding terrain slope is calculated to
+                                            estimate the depression angle ($$\theta$$).</li>
+                                        <li><strong>Depth Estimation:</strong> $$Depth = Radius \times \tan(\theta)$$
+                                        </li>
+                                        <li><strong>Volume:</strong> $$V = \frac{1}{3} \times Area \times Depth$$</li>
+                                    </ul>
+                                </div>
+                                <div
+                                    class="bg-slate-800 p-4 rounded-lg flex items-center justify-center h-40 border border-slate-700">
+                                    <!-- Simple CSS Shapes Visualization -->
+                                    <div class="relative w-32 h-24 border-b-2 border-cyan-500/50">
+                                        <div
+                                            class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[60px] border-l-transparent border-r-[60px] border-r-transparent border-t-[80px] border-t-cyan-500/20">
+                                        </div>
+                                        <div class="absolute top-0 left-0 w-full h-[1px] bg-cyan-400 dashed"></div>
+                                        <div
+                                            class="absolute bottom-0 left-1/2 w-[1px] h-[80px] bg-white/30 -translate-y-[80px]">
+                                        </div>
+                                        <div class="absolute -right-4 top-8 text-xs text-slate-500">Slope (tan &theta;)
+                                        </div>
+                                        <div class="absolute left-1/2 bottom-1 text-xs text-white">Depth</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                <span
+                                    class="w-6 h-6 rounded bg-cyan-500 text-black flex items-center justify-center text-xs font-bold">4</span>
+                                Bathymetric Mapping
+                            </h3>
+                            <p class="text-slate-400 leading-relaxed ml-8">
+                                Relative depth is visualized by subtracting the underlying DEM elevation from the
+                                calculated average water surface elevation.
+                                <br>
+                                <code
+                                    class="bg-slate-800 px-2 py-1 rounded text-cyan-400 text-sm mt-2 block w-fit">Depth_Pixel = Water_Surface_Elev - Terrain_Elev</code>
+                                <br>
+                                This generates a gradient map showing estimated deep and shallow zones.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- UPLOAD View -->
+        <section id="data-mgmt" class="absolute inset-0 p-8 hidden flex items-center justify-center">
+            <div class="glass-card p-8 rounded-xl max-w-2xl w-full">
+                <h2 class="text-2xl font-bold mb-2">Data Ingestion</h2>
+                <p class="text-slate-400 mb-6 text-sm">Upload local bathymetric data to calibrate the GEE model.</p>
+
+                <div class="space-y-4">
+                    <div
+                        class="border-2 border-dashed border-slate-700 rounded-lg p-8 flex flex-col items-center justify-center hover:border-cyan-500 transition-colors bg-white/5 cursor-pointer">
+                        <span class="text-3xl mb-2">📂</span>
+                        <span class="text-sm font-bold text-slate-300">Upload Boundary (GeoJSON)</span>
+                        <input type="file" id="boundaryFile" class="hidden">
+                    </div>
+                    <div
+                        class="border-2 border-dashed border-slate-700 rounded-lg p-8 flex flex-col items-center justify-center hover:border-cyan-500 transition-colors bg-white/5 cursor-pointer">
+                        <span class="text-3xl mb-2">📉</span>
+                        <span class="text-sm font-bold text-slate-300">Upload Bathymetry (CSV)</span>
+                        <input type="file" id="bathyFile" class="hidden">
+                    </div>
+                    <button class="w-full btn-primary py-3 rounded-lg font-bold">Process Dataset</button>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <script>
-        // --- Gemini Configuration ---
-        // --- Gemini Configuration ---
-        const apiURL = `${API_BASE_URL}/api/gemini`; // Use backend proxy for Gemini API
-
-        // --- State ---
-        const state = {
-            map: null,
-            marker: null,
-            layerGroup: null,
-            currentLat: 0,
-            currentLng: 0,
-            currentArea: 0,
-            currentVol: 0,
-            isScanning: false,
-            layers: {} // Store layers for reporting
-        };
-
-        // --- File Management ---
-        function updateDropzone(input, labelId, fileNameId) {
-            const label = input.closest('label'); // Use closest to find the parent label if ID fails or logic changes
-            const nameDisplay = document.getElementById(fileNameId);
-
-            input.addEventListener('change', function (e) {
-                const file = e.target.files[0];
-
-                if (file) {
-                    // Visual Success State
-                    label.classList.remove('border-slate-300', 'bg-slate-50', 'hover:bg-slate-100');
-                    label.classList.add('border-emerald-500', 'bg-emerald-50');
-
-                    // Update Content
-                    const container = label.firstElementChild;
-                    container.innerHTML = `
-                        <div class="text-3xl mb-2">✅</div>
-                        <p class="text-sm text-emerald-700 font-bold break-all px-2 text-center">${file.name}</p>
-                        <p class="text-xs text-emerald-600 mt-1">Ready to upload</p>
-                    `;
-                    nameDisplay.innerText = "";
-                }
-            });
-        }
-
-        // Initialize dropzones
-        const bInput = document.getElementById('boundaryFile');
-        const dInput = document.getElementById('bathyFile');
-        if (bInput && dInput) {
-            updateDropzone(bInput, 'boundaryLabel', 'boundFileName');
-            updateDropzone(dInput, 'bathyLabel', 'bathyFileName');
-        }
-
-        async function processUpload() {
-            const btn = document.getElementById('processBtn');
-            const bFile = document.getElementById('boundaryFile').files[0];
-            const dFile = document.getElementById('bathyFile').files[0];
-
-            if (!bFile || !dFile) {
-                alert("Please upload both a Boundary (GeoJSON) and Bathymetry (CSV) file.");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = "⏳ Processing Geometry...";
-
-            const formData = new FormData();
-            formData.append('boundary', bFile);
-            formData.append('bathymetry', dFile);
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/upload_process`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    // Success
-                    document.getElementById('uploadResults').classList.remove('hidden');
-                    const data = result.data;
-                    const last = data[data.length - 1];
-
-                    document.getElementById('resPoints').innerText = 'Checked';
-                    document.getElementById('resVol').innerText = last['Volume (MCM)'];
-
-                    const tbody = document.getElementById('resTableBody');
-                    tbody.innerHTML = '';
-                    // Show first 5 and last 5? Or just all if small.
-                    data.forEach(row => {
-                        const tr = document.createElement('tr');
-                        tr.className = "bg-white border-b hover:bg-slate-50";
-                        tr.innerHTML = `
-                            <td class="px-4 py-2">${row['Elevation (m)']}</td>
-                            <td class="px-4 py-2">${row['Surface Area (sq km)']}</td>
-                            <td class="px-4 py-2 font-bold text-cyan-600">${row['Volume (MCM)']}</td>
-                         `;
-                        tbody.appendChild(tr);
-                    });
-
-                    btn.innerText = "✅ Processing Complete";
-
-                } else {
-                    alert('Error: ' + result.message || result.error);
-                    btn.innerText = "❌ Processing Failed";
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Network error occurred.");
-                btn.innerText = "❌ Processing Failed";
-            } finally {
-                btn.disabled = false;
-            }
-        }
-
-        // --- Reporting ---
-        function downloadCSV() {
-            if (state.currentArea === 0) {
-                alert("No analysis data to export. Please select a location first.");
-                return;
-            }
-
-            const now = new Date().toISOString();
-            const csvContent = "data:text/csv;charset=utf-8,"
-                + "Metric,Value,Unit\n"
-                + `Analysis Date,${now},-\n`
-                + `Latitude,${state.currentLat},deg\n`
-                + `Longitude,${state.currentLng},deg\n`
-                + `Water Surface Area,${state.currentArea},km2\n`
-                + `Estimated Volume,${state.currentVol},MCM\n`
-                + `Status,${document.getElementById('statusText').innerText},-\n`
-                + `AI Summary,"${document.getElementById('aiText').innerText.replace(/\n/g, ' ').replace(/"/g, '""')}","-"\n`; // Simple CSV escaping
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `aquasense_report_${now.slice(0, 10)}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // New Helper for Backend Downloads
-        function downloadFile(type) {
-            const url = `${API_BASE_URL}/api/download/${type}`;
-            window.open(url, '_blank');
-        }
-
-        // --- Initialization ---
-        document.addEventListener('DOMContentLoaded', () => {
-            initMap();
-            initCharts();
-        });
-
-        // --- Map Logic ---
-        function initMap() {
-            // Center on a nice water body (e.g., KRS Dam, India)
-            state.map = L.map('map').setView([12.4244, 76.5761], 13);
-
-            // Satellite Layer (Esri World Imagery)
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-            }).addTo(state.map);
-
-            // Labels Layer (Optional, adds context)
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-                attribution: ''
-            }).addTo(state.map);
-
-            state.layerGroup = L.layerGroup().addTo(state.map);
-
-            // Click Handler
-            state.map.on('click', onMapClick);
-        }
-
-        function onMapClick(e) {
-            if (state.isScanning) return;
-
-            state.currentLat = e.latlng.lat;
-            state.currentLng = e.latlng.lng;
-
-            // 1. Update UI Coordinates
-            document.getElementById('dispLat').innerText = state.currentLat.toFixed(5);
-            document.getElementById('dispLon').innerText = state.currentLng.toFixed(5);
-
-            // 2. Add Visual Marker
-            state.layerGroup.clearLayers();
-            L.marker([state.currentLat, state.currentLng]).addTo(state.layerGroup)
-                .bindPopup("Target Location Selected").openPopup();
-
-            // 3. Start Simulation
-            startScanning();
-        }
-
-        async function startScanning() {
-            state.isScanning = true;
-            const scanner = document.getElementById('scanner');
-            const statusText = document.getElementById('statusText');
-            const statusDot = document.getElementById('statusDot');
-
-            // UI State: Scanning
-            scanner.style.display = 'block';
-            statusText.innerText = "Processing Sentinel-2 Tiles...";
-            statusText.className = "text-cyan-600 font-bold animate-pulse";
-            statusDot.className = "w-2 h-2 rounded-full bg-cyan-500 animate-ping mr-2";
-
-            // Reset Metrics
-            document.getElementById('metricArea').innerText = "--";
-            document.getElementById('metricVolume').innerText = "--";
-            document.getElementById('fillBar').style.width = "0%";
-            document.getElementById('aiOutput').classList.add('hidden');
-
-            // Cold Start Detector
-            const coldStartTimer = setTimeout(() => {
-                statusText.innerText = "Waking up Server (may take 60s)...";
-                statusText.className = "text-orange-500 font-bold animate-pulse";
-            }, 3000);
-
-            try {
-                // Call Backend API
-                const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lat: state.currentLat, lng: state.currentLng })
-                });
-
-                clearTimeout(coldStartTimer); // Stop the cold start warning
-
-                if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`Server Error (${response.status}): ${errText}`);
-                }
-
-                const data = await response.json();
-
-                if (data.error) {
-                    alert('Error: ' + data.error);
-                    throw new Error(data.error);
-                }
-
-                // Update State with Real Data
-                state.currentArea = data.area;
-                state.currentVol = data.volume;
-                state.layers = data.layers; // Save layers
-
-                // Dynamic Capacity based on Seasonal Max
-                const capacity = data.max_volume > 0 ? data.max_volume : state.currentVol * 1.5;
-                let fillPct = 0;
-                if (capacity > 0) {
-                    fillPct = Math.min(100, Math.round((state.currentVol / capacity) * 100));
-                }
-
-                updateMetrics(state.currentArea, state.currentVol, fillPct, data.avg_elevation);
-                statusText.innerText = `Analysis Complete (${data.date})`;
-                statusText.className = "text-green-600 font-bold";
-                statusDot.className = "w-2 h-2 rounded-full bg-green-500 mr-2";
-
-                // Update Charts with Seasonal Data
-                updateCharts(state.currentVol, data.seasonal);
-
-                // ADD LAYER CONTROLS (Dynamic)
-                updateLayerControl(state.layers);
-
-            } catch (err) {
-                clearTimeout(coldStartTimer);
-                console.error(err);
-
-                // Friendly User Error
-                let msg = "Analysis Failed";
-                if (err.message.includes('Failed to fetch')) {
-                    msg = "Connection Failed (Server Offline?)";
-                } else if (err.message.includes('500')) {
-                    msg = "Server Error (Check GEE Auth)";
-                    alert("Server Error: The backend failed to process the request. This usually means Google Earth Engine Authentication failed.");
-                }
-
-                statusText.innerText = msg;
-                statusText.className = "text-red-600 font-bold";
-                statusDot.className = "w-2 h-2 rounded-full bg-red-500 mr-2";
-            } finally {
-                state.isScanning = false;
-                scanner.style.display = 'none';
-            }
-        }
-
-        let overlayLayers = {};
-
-        function updateLayerControl(layers) {
-            // Remove existing overlays
-            if (overlayLayers.group) {
-                state.map.removeLayer(overlayLayers.group);
-            }
-            overlayLayers.group = L.layerGroup().addTo(state.map);
-
-            const controlDiv = document.getElementById('layerControl');
-            controlDiv.innerHTML = '<h5 class="font-bold text-xs mb-2">Multi-Spectral Layers</h5>';
-            controlDiv.classList.remove('hidden');
-
-            const addLayerOption = (name, url, label, color) => {
-                if (!url) return;
-
-                const layer = L.tileLayer(url, { opacity: 0.8 });
-
-                const div = document.createElement('div');
-                div.className = "flex items-center mb-1 cursor-pointer";
-                div.innerHTML = `
-                    <input type="checkbox" id="layer_${name}" class="mr-2 h-3 w-3 text-cyan-600">
-                    <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${color}"></div>
-                    <label for="layer_${name}" class="text-xs text-slate-600 hover:text-cyan-800">${label}</label>
-                `;
-
-                div.onclick = (e) => {
-                    // Prevent double triggering from label+checkbox
-                    if (e.target.tagName !== 'INPUT') {
-                        document.getElementById(`layer_${name}`).click();
-                        return;
-                    }
-                    if (e.target.checked) {
-                        layer.addTo(overlayLayers.group);
-                    } else {
-                        overlayLayers.group.removeLayer(layer);
-                    }
-                };
-
-                controlDiv.appendChild(div);
-            };
-
-            addLayerOption('winter', layers.winter, 'Winter Spread (Jan-Feb)', '#0891b2');
-            addLayerOption('summer', layers.summer, 'Summer Spread (Apr-May)', '#fb923c');
-            addLayerOption('monsoon', layers.monsoon, 'Monsoon Spread (Aug-Sep)', '#16a34a');
-            addLayerOption('depth', layers.depth, 'Bathymetric Depth Map', '#0077b6');
-        }
-
-        function updateMetrics(area, vol, fillPct, elevation) {
-            document.getElementById('metricArea').innerText = area;
-            document.getElementById('metricVolume').innerText = vol;
-
-            // Add Elevation visual
-            const volLabel = document.getElementById('metricVolume').parentElement.nextElementSibling;
-            volLabel.innerText = `Elev: ${elevation}m | Area × DEM Slope`;
-
-            const fillBar = document.getElementById('fillBar');
-            fillBar.style.width = `${fillPct}%`;
-            document.getElementById('fillPct').innerText = `${fillPct}%`;
-
-            if (fillPct < 30) fillBar.className = "h-2 rounded-full transition-all duration-1000 bg-red-500";
-            else if (fillPct > 80) fillBar.className = "h-2 rounded-full transition-all duration-1000 bg-blue-600";
-            else fillBar.className = "h-2 rounded-full transition-all duration-1000 bg-cyan-500";
-        }
-
-        // --- Charting ---
-        let trendChart, seasonalChart;
-
-        function initCharts() {
-            // Trend Chart
-            const ctx1 = document.getElementById('trendChart').getContext('2d');
-            trendChart = new Chart(ctx1, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                    datasets: [{
-                        label: 'Estimated Volume (MCM)',
-                        data: Array(12).fill(0),
-                        borderColor: '#06b6d4',
-                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-
-            // Seasonal Chart
-            const ctx2 = document.getElementById('seasonalChart').getContext('2d');
-            seasonalChart = new Chart(ctx2, {
-                type: 'bar',
-                data: {
-                    labels: ['Summer (Apr-May)', 'Monsoon (Aug-Sep)', 'Winter (Jan-Feb)'],
-                    datasets: [{
-                        label: 'Water Spread (km²)',
-                        data: [0, 0, 0],
-                        backgroundColor: ['#f59e0b', '#3b82f6', '#06b6d4'],
-                        borderRadius: 4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        function updateCharts(currentVol, seasonalData) {
-            // Simulate trend history based on current volume (keeping this simulated for smooth line)
-            const baseVol = parseFloat(currentVol);
-            const history = [];
-            for (let i = 0; i < 12; i++) {
-                history.push(baseVol * (0.8 + Math.random() * 0.4));
-            }
-            trendChart.data.datasets[0].data = history;
-            trendChart.update();
-
-            // Update Seasonal with Real Data
-            if (seasonalData) {
-                seasonalChart.data.datasets[0].data = [
-                    seasonalData.summer,
-                    seasonalData.monsoon,
-                    seasonalData.winter
-                ];
-                seasonalChart.update();
-            }
-        }
-
-        // --- Gemini AI Integration ---
-        async function generateAIReport() {
-            const btn = document.getElementById('aiBtn');
-            const outputBox = document.getElementById('aiOutput');
-            const outputText = document.getElementById('aiText');
-
-            if (state.currentVol == 0) {
-                alert("Please click a location on the map first!");
-                return;
-            }
-
-            btn.innerHTML = "⏳ Consulting Gemini...";
-            btn.disabled = true;
-
-            const prompt = `
-                I have performed a satellite analysis on coordinates Lat: ${state.currentLat.toFixed(4)}, Lon: ${state.currentLng.toFixed(4)}.
-                The detected water metrics are:
-                - Surface Area: ${state.currentArea} km²
-                - Estimated Volume: ${state.currentVol} MCM
-                
-                Act as a water resource expert. Write a very brief (3 bullet points) situation report.
-                1. Is this volume significant for a local reservoir?
-                2. If this is in a dry region, what is the recommendation?
-                3. Mention one potential agricultural use.
-                Format as Markdown.
-            `;
-
-            try {
-                const response = await fetch(apiURL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const data = await response.json();
-                if (data.error) {
-                    outputText.innerHTML = "AI Service Error: " + data.error;
-                    outputBox.classList.remove('hidden');
-                    return;
-                }
-                const aiContent = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
-                if (aiContent) {
-                    outputText.innerHTML = marked.parse(aiContent);
-                } else {
-                    outputText.innerHTML = "AI Service Error: Unexpected response format.";
-                }
-                outputBox.classList.remove('hidden');
-            } catch (e) {
-                outputText.innerHTML = "Error connecting to AI service: " + e;
-                outputBox.classList.remove('hidden');
-            } finally {
-                btn.innerHTML = "✨ Analyze Location with AI";
-                btn.disabled = false;
-            }
-        }
-
-        // --- Nav ---
-        function navTo(id) {
-            ['dashboard', 'analysis', 'methodology', 'data-mgmt'].forEach(vid => {
-                const el = document.getElementById(vid);
-                const navEl = document.getElementById('nav-' + vid);
-                if (el) el.classList.add('hidden');
-                if (navEl) {
-                    navEl.classList.remove('nav-active', 'text-cyan-600');
-                    navEl.classList.add('text-slate-600');
-                }
-            });
-            document.getElementById(id).classList.remove('hidden');
-            document.getElementById('nav-' + id).classList.add('nav-active', 'text-cyan-600');
-
-            // Resize map if needed when tab switches
-            if (id === 'dashboard' && state.map) {
-                setTimeout(() => state.map.invalidateSize(), 200);
-            }
-        }
-    </script>
+    <!-- Global Toast -->
+    <div id="toast-notification"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-700 transform transition-all duration-300 translate-y-20 opacity-0 z-50 flex items-center gap-3">
+        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+        <span id="toast-msg">Notification</span>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="aiModal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div
+            class="glass-panel w-full max-w-2xl rounded-2xl p-8 relative animate-slide-up border border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.2)]">
+            <button onclick="closeAIModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="text-2xl">✨</span>
+                <h2 class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                    Gemini Analysis</h2>
+            </div>
+            <div id="aiContent" class="prose prose-invert prose-sm max-w-none text-slate-300">
+                <!-- Content -->
+            </div>
+            <div class="mt-8 flex justify-end">
+                <button onclick="closeAIModal()" class="btn-glass px-6 py-2 rounded-lg text-sm">Close Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
 </body>
 
 </html>
