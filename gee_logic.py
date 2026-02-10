@@ -33,7 +33,7 @@ def initialize_gee():
                 scoped_credentials = credentials.with_scopes(['https://www.googleapis.com/auth/earthengine'])
                 
                 print(f"Attempting to initialize GEE with Service Account and project: {GOOGLE_CLOUD_PROJECT}")
-                ee.Initialize(credentials=scoped_credentials, project=GOOGLE_CLOUD_PROJECT)
+                ee.Initialize(credentials=scoped_credentials, project=GOOGLE_CLOUD_PROJECT, opt_url='https://earthengine-highvolume.googleapis.com')
                 print(f"Google Earth Engine initialized successfully with Service Account.")
                 return
             except Exception as e:
@@ -42,7 +42,7 @@ def initialize_gee():
         if GOOGLE_CLOUD_PROJECT:
             try:
                 print(f"Attempting to initialize GEE with project: {GOOGLE_CLOUD_PROJECT}")
-                ee.Initialize(project=GOOGLE_CLOUD_PROJECT)
+                ee.Initialize(project=GOOGLE_CLOUD_PROJECT, opt_url='https://earthengine-highvolume.googleapis.com')
                 print(f"Google Earth Engine initialized successfully with project: {GOOGLE_CLOUD_PROJECT}")
             except Exception as e:
                 print(f"Project-specific init failed: {e}. Falling back to default...")
@@ -83,12 +83,10 @@ def get_water_metrics(roi, start_date, end_date, scale=10):
                   .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) \
                   .sort('CLOUDY_PIXEL_PERCENTAGE') # Get least cloudy
         
-        # Check if collection is empty
-        count = dataset.size().getInfo()
-        if count == 0:
-            return 0, None
-            
         image = dataset.first()
+        
+        if not image:
+            return 0, None
         
         # Calculate NDWI
         ndwi = image.normalizedDifference(['B3', 'B8']).rename('NDWI')
@@ -215,15 +213,7 @@ def analyze_water(lat, lon):
         def get_map_url(image, viz_params):
             try:
                 map_id = image.getMapId(viz_params)
-                # Manually construct URL to avoid weird template issues
-                # Standard V1 API: https://earthengine.googleapis.com/v1/{mapid}/tiles/{z}/{x}/{y}
-                
-                base_url = "https://earthengine.googleapis.com/v1"
-                map_name = map_id['mapid']
-                url = f"{base_url}/{map_name}/tiles/{{z}}/{{x}}/{{y}}"
-                
-                print(f"Generated URL: {url}")
-                return url
+                return map_id['tile_fetcher'].url_format
             except Exception as e:
                 print(f"Error generating map URL: {e}")
                 return None
@@ -247,11 +237,6 @@ def analyze_water(lat, lon):
                     .map(lambda img: img.normalizedDifference(['B3', 'B8']).rename('NDWI'))
                 
                 # Create a composite (max NDWI to find water, or median)
-                # Check if collection is empty
-                count = col.size().getInfo()
-                if count == 0:
-                     return None
-
                 # Max NDWI is good for "Water Spread" to show max extent
                 water_composite = col.max().gt(0.1).selfMask()
                 

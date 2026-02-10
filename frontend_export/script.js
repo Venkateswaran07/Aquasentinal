@@ -122,126 +122,44 @@ function onMapClick(e) {
     });
     L.marker([state.currentLat, state.currentLng], { icon: rippleIcon }).addTo(state.layerGroup);
 
-    startAnalysis();
+    startMockScanning();
 }
 
 let scanController = null;
 
-// Real Analysis Function
-async function startAnalysis() {
+// Mock Scanning Function for UI Demo
+function startMockScanning() {
     state.isScanning = true;
     const overlay = document.getElementById('scanning-overlay');
     const statusText = document.getElementById('scan-status');
 
     overlay.style.display = 'flex';
-    statusText.innerText = "Connecting to Satellite Network...";
+    statusText.innerText = "Analyzing Data...";
 
-    try {
-        // 1. Send Request to Backend
-        statusText.innerText = "Acquiring Multispectral Imagery...";
+    // Mock Steps
+    setTimeout(() => { if (state.isScanning) statusText.innerText = "Processing Imagery..."; }, 1000);
+    setTimeout(() => { if (state.isScanning) statusText.innerText = "Calculating Metrics..."; }, 2000);
 
-        const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                lat: state.currentLat,
-                lng: state.currentLng
-            })
+    // Mock Completion
+    setTimeout(() => {
+        if (!state.isScanning) return;
+
+        statusText.innerText = "Complete.";
+        showToast("Analysis Complete (Mock Data)", "success");
+
+        // Mock Data Update
+        updateMetrics({
+            area: 4.52,
+            volume: 12.8,
+            avg_elevation: 124.5,
+            max_volume: 15.0
         });
 
-        statusText.innerText = "Processing GEE Algorithms...";
-
-        if (!response.ok) {
-            throw new Error(`Analysis Failed: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error);
-        }
-
-        // 2. Update UI with Real Data
-        statusText.innerText = "Finalizing Report...";
-        updateMetrics(data);
-        updateLayers(data.layers);
-
-        showToast("Analysis Complete", "success");
-
-    } catch (err) {
-        console.error(err);
-        showToast(`Error: ${err.message}`, "error");
-        statusText.innerText = "ERROR";
-    } finally {
-        // Hide Overlay
         setTimeout(() => {
             overlay.style.display = 'none';
             state.isScanning = false;
-        }, 800);
-    }
-}
-
-function updateLayers(layers) {
-    if (!layers) return;
-
-    // Clear previous analysis layers
-    state.layerGroup.clearLayers();
-    // Re-add marker
-    const rippleIcon = L.divIcon({
-        className: 'ripple-icon',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-    });
-    L.marker([state.currentLat, state.currentLng], { icon: rippleIcon }).addTo(state.layerGroup);
-
-    // Setup Layer Controls
-    const layerControlDiv = document.getElementById('layerControl');
-    const layerControlPanel = document.getElementById('layerControlPanel');
-    layerControlDiv.innerHTML = ''; // Clear old controls
-
-    // Helper to add a layer toggle
-    const addLayerToggle = (id, name, url, color) => {
-        if (!url) return;
-
-        // Create Layer
-        const layer = L.tileLayer(url, { opacity: 0.8 });
-
-        // Create UI Toggle
-        const div = document.createElement('div');
-        div.className = "flex items-center gap-3 p-2 rounded bg-slate-800/50 hover:bg-slate-700/50 cursor-pointer transition-colors";
-        div.innerHTML = `
-            <input type="checkbox" id="toggle-${id}" class="w-4 h-4 rounded border-slate-600 text-cyan-500 focus:ring-offset-0 bg-slate-700">
-            <div class="w-3 h-3 rounded-full" style="background-color: ${color}"></div>
-            <span class="text-sm font-medium text-slate-300">${name}</span>
-        `;
-
-        const checkbox = div.querySelector('input');
-
-        // Event Listener
-        checkbox.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                state.layerGroup.addLayer(layer);
-            } else {
-                state.layerGroup.removeLayer(layer);
-            }
-        });
-
-        layerControlDiv.appendChild(div);
-    };
-
-    // Add specific layers based on GEE response
-    if (layers.water_mask) addLayerToggle('water', 'Current Water Extent', layers.water_mask, '#00FFFF');
-    if (layers.depth) addLayerToggle('depth', 'Bathymetry (Depth)', layers.depth, '#08519c');
-    if (layers.analytics) addLayerToggle('contour', 'Depth Contours', layers.analytics, '#ffffff');
-
-    if (layers.winter) addLayerToggle('winter', 'Winter Extent', layers.winter, '#0891b2');
-    if (layers.summer) addLayerToggle('summer', 'Summer Extent', layers.summer, '#ea580c');
-    if (layers.monsoon) addLayerToggle('monsoon', 'Monsoon Extent', layers.monsoon, '#16a34a');
-
-    // Show panel
-    layerControlPanel.classList.remove('hidden');
+        }, 500);
+    }, 3000);
 }
 
 function cancelScanning() {
